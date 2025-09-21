@@ -24,13 +24,12 @@ async fn s3_client() -> Result<Client, Error> {
 }
 
 pub(crate) async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error> {
-    
     let s3_bucket_name = get_env_var("S3_BUCKET_NAME").unwrap();
     let s3_dir_name = get_env_var("S3_DIR_NAME").unwrap();
-    
+
     let client = s3_client().await?;
     let dataitem = reconstruct_dataitem_data(data.clone())?;
-    
+
     let dataitem_id = dataitem.0.arweave_id();
     let key_dataitem: String = format!("{s3_dir_name}/{dataitem_id}.ans104");
 
@@ -46,6 +45,3 @@ pub(crate) async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error
 
     Ok(dataitem_id)
 }
-
-
-

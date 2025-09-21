@@ -1,14 +1,15 @@
+use crate::{
+    api::interfaces::UploadNormalFileResponse,
+    s3::store_signed_dataitem,
+    utils::{DATA_CACHES, FAST_FINALITY_INDEXES, extract_owner_address, reconstruct_dataitem_data},
+};
 use axum::{
+    Json,
+    body::Bytes,
     extract::Path,
     http::{HeaderMap, StatusCode},
-    body::Bytes,
-    Json
 };
 use serde_json::Value;
-use crate::api::interfaces::UploadNormalFileResponse;
-use crate::s3::store_signed_dataitem;
-use crate::utils::{reconstruct_dataitem_data, DATA_CACHES, FAST_FINALITY_INDEXES, extract_owner_address};
-
 
 pub async fn handle_route() -> Json<Value> {
     Json(serde_json::json!({
@@ -23,7 +24,6 @@ pub async fn upload_tx_handler(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<UploadNormalFileResponse>, StatusCode> {
-    
     if let Some(content_type) = headers.get("content-type") {
         if content_type != "application/octet-stream" {
             return Err(StatusCode::BAD_REQUEST);
@@ -31,7 +31,7 @@ pub async fn upload_tx_handler(
     }
 
     let data = body.to_vec();
-    
+
     let (dataitem, _content_type) = match reconstruct_dataitem_data(data.clone()) {
         Ok(result) => result,
         Err(_) => return Err(StatusCode::BAD_REQUEST),
@@ -47,7 +47,7 @@ pub async fn upload_tx_handler(
     let response = UploadNormalFileResponse {
         id: transaction_id,
         owner,
-        winc: "0".to_string(), 
+        winc: "0".to_string(),
         data_caches: vec![DATA_CACHES.to_string()],
         fast_finality_indexes: vec![FAST_FINALITY_INDEXES.to_string()],
     };

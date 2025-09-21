@@ -1,5 +1,7 @@
-use crate::api::handlers::{handle_route, upload_tx_handler};
-use crate::utils::{OBJECT_SIZE_LIMIT, SERVER_PORT};
+use crate::{
+    api::handlers::{handle_route, upload_tx_handler},
+    utils::{OBJECT_SIZE_LIMIT, SERVER_PORT},
+};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
