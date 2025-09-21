@@ -1,4 +1,5 @@
-use crate::api::{OBJECT_SIZE_LIMIT, SERVER_PORT, handlers::handle_route};
+use crate::api::handlers::{handle_route, upload_tx_handler};
+use crate::utils::{OBJECT_SIZE_LIMIT, SERVER_PORT};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
@@ -7,6 +8,8 @@ use axum::{
 use dotenvy::dotenv;
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer};
 mod api;
+mod s3;
+mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -20,6 +23,7 @@ async fn main() {
 
     let router = Router::new()
         .route("/", get(handle_route))
+        .route("/v1/tx/{token}", post(upload_tx_handler))
         .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))
         .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))
         .layer(cors);
