@@ -1,7 +1,10 @@
 use crate::{
     api::interfaces::UploadNormalFileResponse,
     s3::store_signed_dataitem,
-    utils::{DATA_CACHES, FAST_FINALITY_INDEXES, extract_owner_address, reconstruct_dataitem_data},
+    utils::{
+        DATA_CACHES, FAST_FINALITY_INDEXES, OBJECT_SIZE_LIMIT, extract_owner_address,
+        reconstruct_dataitem_data,
+    },
 };
 use axum::{
     Json,
@@ -11,11 +14,14 @@ use axum::{
 };
 use serde_json::Value;
 
-pub async fn handle_route() -> Json<Value> {
+pub async fn handle_root() -> Json<Value> {
     Json(serde_json::json!({
         "status": "running",
         "name": "loaded-turbo-api",
-        "version": env!("CARGO_PKG_VERSION")
+        "version": env!("CARGO_PKG_VERSION"),
+        "object_size_limit": OBJECT_SIZE_LIMIT,
+        "data_caches": vec![DATA_CACHES.to_string()],
+        "fast_finality_indexes": vec![FAST_FINALITY_INDEXES.to_string()]
     }))
 }
 
