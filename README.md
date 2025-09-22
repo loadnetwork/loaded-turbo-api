@@ -24,7 +24,7 @@ A Rust-based [turbo-sdk](https://github.com/ardriveapp/turbo-sdk) compatible HTT
 
 ## Endpoints:
 
-- loaded-turbo-api (offchain, Load S3 bundler endpoint):
+- loaded-turbo-api (offchain, Load S3 bundler endpoint): https://loaded-turbo-api.load.network
 - data cache / fast finality index: https://gateway.s3-node-1.load.network
 
 ## Examples
@@ -51,7 +51,7 @@ import fs from 'fs';
   const customTurboConfig = {
     ...developmentTurboConfiguration,
     uploadServiceConfig: {
-      url: 'http://localhost:3000', // loaded-turbi-api endpoint
+      url: 'https://loaded-turbo-api.load.network', // loaded-turbi-api endpoint
     },
   };
 
