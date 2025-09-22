@@ -39,7 +39,7 @@ import fs from 'fs';
 
 (async () => {
   // Create a test file
-  const testData = 'Hello from loaded-turbi-api S3 bundler!';
+  const testData = 'Hello from loaded-turbo-api S3 bundler!';
   fs.writeFileSync('test-file.txt', testData);
 
   // Create an Arweave key for testing
@@ -51,7 +51,7 @@ import fs from 'fs';
   const customTurboConfig = {
     ...developmentTurboConfiguration,
     uploadServiceConfig: {
-      url: 'https://loaded-turbo-api.load.network', // loaded-turbi-api endpoint
+      url: 'https://loaded-turbo-api.load.network', // loaded-turbo-api endpoint
     },
   };
 
@@ -63,7 +63,7 @@ import fs from 'fs';
 
   try {
     // Test upload
-    console.log('Uploading file loaded-turbi-api');
+    console.log('Uploading file loaded-turbo-api');
     const uploadResult = await turboAuthClient.uploadFile({
     fileStreamFactory: () => fs.createReadStream('test-file.txt'),
     fileSizeFactory: () => fs.statSync('test-file.txt').size,
