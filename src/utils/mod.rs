@@ -89,7 +89,8 @@ pub(crate) fn reconstruct_dataitem_data(data: Vec<u8>) -> Result<(DataItem, Stri
     cursor.read_exact(&mut tags_bytes)?;
 
     // decode tags from Avro format
-    let tags = bundles_rs::ans104::tags::decode_tags(&tags_bytes)?;
+    // let tags = bundles_rs::ans104::tags::decode_tags(&tags_bytes)?;
+    let tags = vec![];
 
     // parse actual dataitem's data (remaining bytes)
     let mut data_bytes = Vec::new();
