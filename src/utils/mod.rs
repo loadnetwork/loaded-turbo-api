@@ -1,9 +1,10 @@
 use anyhow::Error;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use bundles_rs::{ans104::data_item::DataItem, crypto::signer::SignatureType};
+use byteorder::{LittleEndian, ReadBytesExt};
 use dotenvy::dotenv;
 use sha3::{Digest, Keccak256};
-use std::env;
+use std::{env, io::Read};
 
 // constants
 pub(crate) const OBJECT_SIZE_LIMIT: usize = 1_073_741_824; // 1GB
@@ -48,38 +49,65 @@ fn ethereum_address_from_pubkey(pubkey: &[u8]) -> String {
 }
 
 pub(crate) fn reconstruct_dataitem_data(data: Vec<u8>) -> Result<(DataItem, String), Error> {
-    use byteorder::{LittleEndian, ReadBytesExt};
-    use std::io::Read;
-
     let mut cursor = std::io::Cursor::new(&data);
 
-    // parse the dataitem structure manually
-    let signature_type =
-        bundles_rs::crypto::signer::SignatureType::from_u16(cursor.read_u16::<LittleEndian>()?);
-
+    // parse signature type and signature
+    let signature_type = SignatureType::from_u16(cursor.read_u16::<LittleEndian>()?);
     let mut signature = vec![0u8; signature_type.signature_len()];
     cursor.read_exact(&mut signature)?;
 
+    // parse owner
     let mut owner = vec![0u8; signature_type.owner_len()];
     cursor.read_exact(&mut owner)?;
 
-    // skip target and anchor parsing for now
-    // TODO
-    let target = None;
-    let anchor = None;
-    let tags = vec![];
+    // parse target (1 byte presence + 32 bytes if present)
+    let target = match cursor.read_u8()? {
+        1 => {
+            let mut t = [0u8; 32];
+            cursor.read_exact(&mut t)?;
+            Some(t)
+        }
+        0 => None,
+        _ => return Err(anyhow::anyhow!("Invalid target presence byte")),
+    };
 
-    // read remaining data
-    let mut remaining_data = Vec::new();
-    cursor.read_to_end(&mut remaining_data)?;
+    // parse anchor (1 byte presence + 32 bytes if present)
+    let anchor = match cursor.read_u8()? {
+        1 => {
+            let mut a = [0u8; 32];
+            cursor.read_exact(&mut a)?;
+            Some(a.to_vec())
+        }
+        0 => None,
+        _ => return Err(anyhow::anyhow!("Invalid anchor presence byte")),
+    };
 
-    // create DataItem without verification
-    let dataitem =
-        DataItem { signature_type, signature, owner, target, anchor, tags, data: remaining_data };
+    // parse tags
+    let tags_bytes_len = cursor.read_u64::<LittleEndian>()? as usize;
 
-    let di = dataitem.clone();
-    let content_type_tag = di
-        .tags
+    let mut tags_bytes = vec![0u8; tags_bytes_len];
+    cursor.read_exact(&mut tags_bytes)?;
+
+    // decode tags from Avro format
+    let tags = bundles_rs::ans104::tags::decode_tags(&tags_bytes)?;
+
+    // parse actual dataitem's data (remaining bytes)
+    let mut data_bytes = Vec::new();
+    cursor.read_to_end(&mut data_bytes)?;
+
+    // create parsed DataItem
+    let dataitem = DataItem {
+        signature_type,
+        signature,
+        owner,
+        target,
+        anchor,
+        tags: tags.clone(),
+        data: data_bytes,
+    };
+
+    // extract content type from tags
+    let content_type_tag = tags
         .iter()
         .find(|tag| tag.name.to_lowercase() == "content-type")
         .map(|tag| tag.value.clone())

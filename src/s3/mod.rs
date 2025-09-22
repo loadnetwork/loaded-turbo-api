@@ -1,6 +1,6 @@
 use crate::utils::{get_env_var, reconstruct_dataitem_data};
 
-use anyhow::{Error, anyhow};
+use anyhow::Error;
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::Client;
 
