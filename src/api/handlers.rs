@@ -1,6 +1,6 @@
 use crate::{
-    api::interfaces::Info,
-    s3::store_signed_dataitem,
+    api::interfaces::{DataItemStatus, Info},
+    s3::{does_dataitem_exist, store_signed_dataitem},
     utils::{
         DATA_CACHES, FAST_FINALITY_INDEXES, FREE_UPLOAD_LIMIT_BYTES, OBJECT_SIZE_LIMIT,
         RECEIPT_HEIGHT_DEADLINE, RECEIPT_VERSION, UPLOADER_AR_ADDRESS, extract_owner_address,
@@ -45,6 +45,24 @@ pub async fn handle_bundler_metrics() -> &'static str {
 
 pub async fn handle_health() -> &'static str {
     "OK"
+}
+
+pub async fn handle_dataitem_status(
+    Path(dataitem_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    if does_dataitem_exist(&dataitem_id).await.unwrap_or_default() {
+        let res = DataItemStatus {
+            status: "CONFIRMED".to_string(),
+            bundle_id: None,
+            winc: "0".to_string(),
+            reason: None,
+            info: "HOT".to_string(),
+        };
+
+        Ok(Json(serde_json::to_value(res).unwrap()))
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
+    }
 }
 
 pub async fn upload_tx_handler(

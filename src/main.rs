@@ -1,6 +1,7 @@
 use crate::{
     api::handlers::{
-        handle_bundler_metrics, handle_health, handle_info, handle_load_info, upload_tx_handler,
+        handle_bundler_metrics, handle_dataitem_status, handle_health, handle_info,
+        handle_load_info, upload_tx_handler,
     },
     utils::{OBJECT_SIZE_LIMIT, SERVER_PORT},
 };
@@ -32,6 +33,7 @@ async fn main() {
         .route("/info", get(handle_info))
         .route("/bundler_metrics", get(handle_bundler_metrics))
         .route("/health", get(handle_health))
+        .route("/v1/tx/{dataitem_id}/status", get(handle_dataitem_status))
         .route("/v1/tx/{token}", post(upload_tx_handler))
         // load network specific endpoint
         .route("/internal", get(handle_load_info))

@@ -45,3 +45,20 @@ pub(crate) async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error
 
     Ok(dataitem_id)
 }
+
+/// simple dataitem existence check against its content length being non-zero
+pub(crate) async fn does_dataitem_exist(dataitem_id: &str) -> Result<bool, Error> {
+    let s3_bucket_name = get_env_var("S3_BUCKET_NAME").unwrap();
+    let s3_dir_name = get_env_var("S3_DIR_NAME").unwrap();
+    let key_dataitem: String = format!("{s3_dir_name}/{dataitem_id}.ans104");
+
+    let client = s3_client().await?;
+
+    let res = client.head_object().bucket(&s3_bucket_name).key(&key_dataitem).send().await?;
+
+    if res.content_length > Some(0) {
+        return Ok(true);
+    }
+
+    Ok(false)
+}
