@@ -1,5 +1,5 @@
 use crate::{
-    api::handlers::{handle_root, upload_tx_handler},
+    api::handlers::{handle_info, handle_load_info, upload_tx_handler},
     utils::{OBJECT_SIZE_LIMIT, SERVER_PORT},
 };
 use axum::{
@@ -24,7 +24,9 @@ async fn main() {
         .allow_headers(tower_http::cors::Any);
 
     let router = Router::new()
-        .route("/", get(handle_root))
+        .route("/", get(handle_info))
+        .route("/info", get(handle_info))
+        .route("/internal", get(handle_load_info))
         .route("/v1/tx/{token}", post(upload_tx_handler))
         .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))
         .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))

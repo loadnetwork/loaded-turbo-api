@@ -11,6 +11,8 @@ pub(crate) const OBJECT_SIZE_LIMIT: usize = 1_073_741_824; // 1GB
 pub(crate) const SERVER_PORT: u32 = 3000;
 pub(crate) const DATA_CACHES: &str = "https://gateway.s3-node-1.load.network";
 pub(crate) const FAST_FINALITY_INDEXES: &str = "https://gateway.s3-node-1.load.network";
+pub(crate) const UPLOADER_AR_ADDRESS: &str = "2BBwe2pSXn_Tp-q_mHry0Obp88dc7L-eDIWx0_BUfD0"; // load-s3-agent address
+pub(crate) const FREE_UPLOAD_LIMIT_BYTES: u32 = 1075200;
 
 pub(crate) fn get_env_var(key: &str) -> Result<String, Error> {
     dotenv().ok();
