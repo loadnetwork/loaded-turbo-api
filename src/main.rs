@@ -1,5 +1,7 @@
 use crate::{
-    api::handlers::{handle_info, handle_load_info, upload_tx_handler},
+    api::handlers::{
+        handle_bundler_metrics, handle_health, handle_info, handle_load_info, upload_tx_handler,
+    },
     utils::{OBJECT_SIZE_LIMIT, SERVER_PORT},
 };
 use axum::{
@@ -26,6 +28,8 @@ async fn main() {
     let router = Router::new()
         .route("/", get(handle_info))
         .route("/info", get(handle_info))
+        .route("/bundler_metrics", get(handle_bundler_metrics))
+        .route("/health", get(handle_health))
         .route("/internal", get(handle_load_info))
         .route("/v1/tx/{token}", post(upload_tx_handler))
         .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))

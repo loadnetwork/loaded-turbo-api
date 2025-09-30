@@ -35,6 +35,14 @@ pub async fn handle_info() -> Json<Value> {
     Json(serde_json::to_value(res).unwrap())
 }
 
+pub async fn handle_bundler_metrics() -> &'static str {
+    "# ALL BUENO"
+}
+
+pub async fn handle_health() -> &'static str {
+    "OK"
+}
+
 pub async fn upload_tx_handler(
     Path(_token): Path<String>,
     headers: HeaderMap,
