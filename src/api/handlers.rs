@@ -1,14 +1,15 @@
-use std::time::{UNIX_EPOCH, SystemTime};
 use crate::{
-    api::interfaces::{Info},
+    api::interfaces::Info,
     s3::store_signed_dataitem,
     utils::{
         DATA_CACHES, FAST_FINALITY_INDEXES, FREE_UPLOAD_LIMIT_BYTES, OBJECT_SIZE_LIMIT,
-        UPLOADER_AR_ADDRESS, extract_owner_address, reconstruct_dataitem_data, RECEIPT_VERSION, RECEIPT_HEIGHT_DEADLINE
+        RECEIPT_HEIGHT_DEADLINE, RECEIPT_VERSION, UPLOADER_AR_ADDRESS, extract_owner_address,
+        reconstruct_dataitem_data,
     },
 };
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::arbundles::{UnsignedReceipt, sign_receipt, SignedReceipt};
+use crate::arbundles::{SignedReceipt, UnsignedReceipt, sign_receipt};
 use axum::{
     Json,
     body::Bytes,
@@ -71,20 +72,17 @@ pub async fn upload_tx_handler(
 
     let owner = extract_owner_address(&dataitem);
 
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
     let unsigned_receipt = UnsignedReceipt {
         id: transaction_id,
-        owner: owner,
+        owner,
         data_caches: vec![DATA_CACHES.to_string()],
         fast_finality_indexes: vec![FAST_FINALITY_INDEXES.to_string()],
         winc: "0".to_string(),
         version: RECEIPT_VERSION.to_string(),
         deadline_height: RECEIPT_HEIGHT_DEADLINE,
-        timestamp: timestamp
+        timestamp,
     };
 
     let signed_receipt: SignedReceipt = sign_receipt(unsigned_receipt).unwrap();

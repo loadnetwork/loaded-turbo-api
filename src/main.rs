@@ -12,9 +12,9 @@ use axum::{
 use dotenvy::dotenv;
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer};
 mod api;
+mod arbundles;
 mod s3;
 mod utils;
-mod arbundles;
 
 #[tokio::main]
 async fn main() {
