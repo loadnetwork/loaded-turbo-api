@@ -13,6 +13,10 @@ pub(crate) const DATA_CACHES: &str = "https://gateway.s3-node-1.load.network";
 pub(crate) const FAST_FINALITY_INDEXES: &str = "https://gateway.s3-node-1.load.network";
 pub(crate) const UPLOADER_AR_ADDRESS: &str = "2BBwe2pSXn_Tp-q_mHry0Obp88dc7L-eDIWx0_BUfD0"; // load-s3-agent address
 pub(crate) const FREE_UPLOAD_LIMIT_BYTES: u32 = 1075200;
+pub(crate) const RECEIPT_VERSION: &str = "0.1.0";
+// a 5 years projection based on 2min blocktime,
+// counting from block #1764397
+pub(crate) const RECEIPT_HEIGHT_DEADLINE: u64 = 3_079_297;
 
 pub(crate) fn get_env_var(key: &str) -> Result<String, Error> {
     dotenv().ok();

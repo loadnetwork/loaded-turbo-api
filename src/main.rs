@@ -14,6 +14,7 @@ use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer};
 mod api;
 mod s3;
 mod utils;
+mod arbundles;
 
 #[tokio::main]
 async fn main() {
@@ -26,12 +27,14 @@ async fn main() {
         .allow_headers(tower_http::cors::Any);
 
     let router = Router::new()
+        // Turbo's uploader-api compliant
         .route("/", get(handle_info))
         .route("/info", get(handle_info))
         .route("/bundler_metrics", get(handle_bundler_metrics))
         .route("/health", get(handle_health))
-        .route("/internal", get(handle_load_info))
         .route("/v1/tx/{token}", post(upload_tx_handler))
+        // load network specific endpoint
+        .route("/internal", get(handle_load_info))
         .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))
         .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))
         .layer(cors);

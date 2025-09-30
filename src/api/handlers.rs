@@ -1,11 +1,14 @@
+use std::time::{UNIX_EPOCH, SystemTime};
 use crate::{
-    api::interfaces::{Info, UploadNormalFileResponse},
+    api::interfaces::{Info},
     s3::store_signed_dataitem,
     utils::{
         DATA_CACHES, FAST_FINALITY_INDEXES, FREE_UPLOAD_LIMIT_BYTES, OBJECT_SIZE_LIMIT,
-        UPLOADER_AR_ADDRESS, extract_owner_address, reconstruct_dataitem_data,
+        UPLOADER_AR_ADDRESS, extract_owner_address, reconstruct_dataitem_data, RECEIPT_VERSION, RECEIPT_HEIGHT_DEADLINE
     },
 };
+
+use crate::arbundles::{UnsignedReceipt, sign_receipt, SignedReceipt};
 use axum::{
     Json,
     body::Bytes,
@@ -47,7 +50,7 @@ pub async fn upload_tx_handler(
     Path(_token): Path<String>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<Json<UploadNormalFileResponse>, StatusCode> {
+) -> Result<Json<SignedReceipt>, StatusCode> {
     if let Some(content_type) = headers.get("content-type") {
         if content_type != "application/octet-stream" {
             return Err(StatusCode::BAD_REQUEST);
@@ -68,13 +71,23 @@ pub async fn upload_tx_handler(
 
     let owner = extract_owner_address(&dataitem);
 
-    let response = UploadNormalFileResponse {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let unsigned_receipt = UnsignedReceipt {
         id: transaction_id,
-        owner,
-        winc: "0".to_string(),
+        owner: owner,
         data_caches: vec![DATA_CACHES.to_string()],
         fast_finality_indexes: vec![FAST_FINALITY_INDEXES.to_string()],
+        winc: "0".to_string(),
+        version: RECEIPT_VERSION.to_string(),
+        deadline_height: RECEIPT_HEIGHT_DEADLINE,
+        timestamp: timestamp
     };
 
-    Ok(Json(response))
+    let signed_receipt: SignedReceipt = sign_receipt(unsigned_receipt).unwrap();
+
+    Ok(Json(signed_receipt))
 }
