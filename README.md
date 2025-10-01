@@ -16,11 +16,16 @@ A Rust-based [turbo-sdk](https://github.com/ardriveapp/turbo-sdk) compatible HTT
 
 | Endpoint  | Status |
 | :-------------: |:-------------:|
+| `GET /` `GET /info`| ✅ |
+| `GET /bundler_metrics` | ✅ |
+| `GET /health`| ✅ |
 | `POST /v1/tx/{token}` (<= 10MB uploads)     | ✅     |
-| `GET /v1/chunks/{token}/-1/-1`      | -     |
-| `POST /v1/chunks/{token}/{upload_id}/{offset}`      | -    |
-| `POST /v1/chunks/{token}/{upload_id}/finalize`      | -    |
-| `GET /v1/chunks/{token}/{upload_id}/status`      | -    |
+| `GET /v1/tx/{dataitem_id}/status` | ✅  |
+| `GET /v1/chunks/{token}/-1/-1`      | ✅     |
+| `GET /v1/chunks/{token}/{upload_id}/-1`      | ✅   |
+| `GET /v1/chunks/{token}/{upload_id}/status`      | ✅    |
+| `POST /v1/chunks/{token}/{upload_id}/{offset}`      | ✅    |
+| `POST /v1/chunks/{token}/{upload_id}/finalize` | ✅ |
 
 ## Endpoints:
 
