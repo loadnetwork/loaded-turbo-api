@@ -34,6 +34,8 @@ A Rust-based [turbo-sdk](https://github.com/ardriveapp/turbo-sdk) compatible HTT
 
 ## Examples
 
+### Small uploads (<= 10 MB)
+
 ```js
 import {
   TurboFactory,
@@ -102,6 +104,75 @@ import fs from 'fs';
     fs.unlinkSync('test-file.txt');
   }
 })();
+```
+
+### Large multipart resumable uploads
+
+```js
+import {
+  TurboFactory,
+  developmentTurboConfiguration,
+} from '@ardrive/turbo-sdk/node';
+import Arweave from 'arweave';
+import fs from 'fs';
+
+(async () => {
+  // Create large file to force multipart upload (>10MB)
+  const largeTestData = 'A'.repeat(15 * 1024 * 1024); // 15MB
+  fs.writeFileSync('large-test-file.txt', largeTestData);
+  console.log('📄 Created 15MB test file');
+
+  // Generate test wallet
+  const arweave = new Arweave({});
+  const jwk = await Arweave.crypto.generateJWK();
+  const address = await arweave.wallets.jwkToAddress(jwk);
+  console.log('Test wallet address:', address);
+
+  const customTurboConfig = {
+    ...developmentTurboConfiguration,
+    uploadServiceConfig: {
+      url: 'https://loaded-turbo-api.load.network',
+    },
+  };
+
+  const turboAuthClient = TurboFactory.authenticated({
+    privateKey: jwk,
+    ...customTurboConfig,
+  });
+
+  try {
+    console.log('Starting multipart upload...');
+    
+    const uploadResult = await turboAuthClient.uploadFile({
+      fileStreamFactory: () => fs.createReadStream('large-test-file.txt'),
+      fileSizeFactory: () => fs.statSync('large-test-file.txt').size,
+      dataItemOpts: {
+        tags: [{ name: 'Content-Type', value: 'text/plain' }]
+      },
+      events: {
+        onProgress: ({ totalBytes, processedBytes, step }) => {
+          const percent = ((processedBytes / totalBytes) * 100).toFixed(1);
+          console.log(`${step.toUpperCase()} Progress: ${percent}% (${processedBytes}/${totalBytes})`);
+        },
+        onUploadProgress: ({ totalBytes, processedBytes }) => {
+          console.log(`Upload: ${((processedBytes / totalBytes) * 100).toFixed(1)}%`);
+        },
+      },
+    });
+
+    console.log('Result:', uploadResult);
+
+  } catch (error) {
+    console.error('\nUpload failed:', error.message);
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Data:', error.response.data);
+    }
+  } finally {
+    fs.unlinkSync('large-test-file.txt');
+  }
+})();
+
 ```
 
 ## License
