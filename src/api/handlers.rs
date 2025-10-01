@@ -61,7 +61,7 @@ pub async fn handle_dataitem_status(
 
         Ok(Json(serde_json::to_value(res).unwrap()))
     } else {
-        return Err(StatusCode::BAD_REQUEST);
+        Err(StatusCode::BAD_REQUEST)
     }
 }
 

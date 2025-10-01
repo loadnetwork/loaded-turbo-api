@@ -11,7 +11,6 @@ pub struct Info {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-
 pub struct DataItemStatus {
     // default to "CONFIRMED" for LS3
     pub status: String,

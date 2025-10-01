@@ -84,7 +84,7 @@ pub fn sign_receipt(receipt: UnsignedReceipt) -> Result<SignedReceipt, Box<dyn s
     let signature_obj = signing_key.sign_with_rng(&mut rng, &hash);
 
     // 3- convert to base64url
-    let signature = URL_SAFE_NO_PAD.encode(&signature_obj.to_bytes());
+    let signature = URL_SAFE_NO_PAD.encode(signature_obj.to_bytes());
     let public = jwk.n;
 
     Ok(SignedReceipt { receipt, public, signature })
