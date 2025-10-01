@@ -1,8 +1,8 @@
 use crate::utils::get_env_var;
-use chrono;
-use sqlx::{Row, SqlitePool};
 use anyhow::Error;
+use chrono;
 use serde::{Deserialize, Serialize};
+use sqlx::{Row, SqlitePool};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUploadResponse {
@@ -20,15 +20,16 @@ pub struct UploadStatusResponse {
 // Database setup
 pub(crate) async fn init_db() -> Result<SqlitePool, Error> {
     let db_path = get_env_var("DB_PATH")?;
-    
+
     // Create directory if it doesn't exist
     if let Some(parent) = std::path::Path::new(&db_path).parent() {
         std::fs::create_dir_all(parent)?;
     }
-    
+
     let pool = SqlitePool::connect(&format!("sqlite:{}", db_path)).await?;
-    
-    sqlx::query(r#"
+
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS uploads (
             upload_id TEXT PRIMARY KEY,
             upload_key TEXT NOT NULL,
@@ -37,9 +38,13 @@ pub(crate) async fn init_db() -> Result<SqlitePool, Error> {
             created_at INTEGER NOT NULL,
             failed_reason TEXT
         )
-    "#).execute(&pool).await?;
-    
-    sqlx::query(r#"
+    "#,
+    )
+    .execute(&pool)
+    .await?;
+
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS chunks (
             upload_id TEXT,
             part_number INTEGER,
@@ -47,18 +52,25 @@ pub(crate) async fn init_db() -> Result<SqlitePool, Error> {
             size INTEGER NOT NULL,
             PRIMARY KEY (upload_id, part_number)
         )
-    "#).execute(&pool).await?;
-    
+    "#,
+    )
+    .execute(&pool)
+    .await?;
+
     // New table to store completed upload information
-    sqlx::query(r#"
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS completed_uploads (
             upload_id TEXT PRIMARY KEY,
             dataitem_id TEXT NOT NULL,
             owner_address TEXT,
             finalized_at INTEGER NOT NULL
         )
-    "#).execute(&pool).await?;
-    
+    "#,
+    )
+    .execute(&pool)
+    .await?;
+
     Ok(pool)
 }
 
@@ -82,10 +94,10 @@ pub async fn create_upload_record(
     pool: &SqlitePool,
     upload_id: &str,
     upload_key: &str,
-    s3_upload_id: &str
+    s3_upload_id: &str,
 ) -> Result<(), Error> {
     sqlx::query(
-        "INSERT INTO uploads (upload_id, upload_key, s3_upload_id, created_at) VALUES (?, ?, ?, ?)"
+        "INSERT INTO uploads (upload_id, upload_key, s3_upload_id, created_at) VALUES (?, ?, ?, ?)",
     )
     .bind(upload_id)
     .bind(upload_key)
@@ -93,7 +105,7 @@ pub async fn create_upload_record(
     .bind(chrono::Utc::now().timestamp())
     .execute(pool)
     .await?;
-    
+
     Ok(())
 }
 
@@ -102,7 +114,7 @@ pub async fn get_upload(pool: &SqlitePool, upload_id: &str) -> Result<InFlightUp
         .bind(upload_id)
         .fetch_one(pool)
         .await?;
-    
+
     Ok(InFlightUpload {
         upload_id: row.get("upload_id"),
         upload_key: row.get("upload_key"),
@@ -114,15 +126,15 @@ pub async fn get_upload(pool: &SqlitePool, upload_id: &str) -> Result<InFlightUp
 
 pub async fn update_chunk_size(
     pool: &SqlitePool,
-    upload_id: &str, 
-    chunk_size: i64
+    upload_id: &str,
+    chunk_size: i64,
 ) -> Result<(), Error> {
     sqlx::query("UPDATE uploads SET chunk_size = ? WHERE upload_id = ?")
         .bind(chunk_size)
         .bind(upload_id)
         .execute(pool)
         .await?;
-    
+
     Ok(())
 }
 
@@ -131,10 +143,10 @@ pub async fn save_chunk(
     upload_id: &str,
     part_number: i64,
     etag: &str,
-    size: i64
+    size: i64,
 ) -> Result<(), Error> {
     sqlx::query(
-        "INSERT OR REPLACE INTO chunks (upload_id, part_number, etag, size) VALUES (?, ?, ?, ?)"
+        "INSERT OR REPLACE INTO chunks (upload_id, part_number, etag, size) VALUES (?, ?, ?, ?)",
     )
     .bind(upload_id)
     .bind(part_number)
@@ -142,21 +154,23 @@ pub async fn save_chunk(
     .bind(size)
     .execute(pool)
     .await?;
-    
+
     Ok(())
 }
 
 pub async fn get_chunks(pool: &SqlitePool, upload_id: &str) -> Result<Vec<ChunkInfo>, Error> {
-    let rows = sqlx::query("SELECT part_number, size FROM chunks WHERE upload_id = ? ORDER BY part_number")
-        .bind(upload_id)
-        .fetch_all(pool)
-        .await?;
-    
-    let chunks = rows.into_iter().map(|row| ChunkInfo {
-        part_number: row.get("part_number"),
-        size: row.get("size"),
-    }).collect();
-    
+    let rows = sqlx::query(
+        "SELECT part_number, size FROM chunks WHERE upload_id = ? ORDER BY part_number",
+    )
+    .bind(upload_id)
+    .fetch_all(pool)
+    .await?;
+
+    let chunks = rows
+        .into_iter()
+        .map(|row| ChunkInfo { part_number: row.get("part_number"), size: row.get("size") })
+        .collect();
+
     Ok(chunks)
 }
 
@@ -165,7 +179,7 @@ pub async fn store_completed_upload(
     pool: &SqlitePool,
     upload_id: &str,
     dataitem_id: &str,
-    owner_address: Option<&str>
+    owner_address: Option<&str>,
 ) -> Result<(), Error> {
     sqlx::query(
         "INSERT INTO completed_uploads (upload_id, dataitem_id, owner_address, finalized_at) VALUES (?, ?, ?, ?)"
@@ -176,19 +190,20 @@ pub async fn store_completed_upload(
     .bind(chrono::Utc::now().timestamp())
     .execute(pool)
     .await?;
-    
+
     Ok(())
 }
 
 // Get completed upload information
-pub async fn get_completed_upload(pool: &SqlitePool, upload_id: &str) -> Result<(String, Option<String>), Error> {
-    let row = sqlx::query("SELECT dataitem_id, owner_address FROM completed_uploads WHERE upload_id = ?")
-        .bind(upload_id)
-        .fetch_one(pool)
-        .await?;
-    
-    Ok((
-        row.get("dataitem_id"),
-        row.get("owner_address"),
-    ))
+pub async fn get_completed_upload(
+    pool: &SqlitePool,
+    upload_id: &str,
+) -> Result<(String, Option<String>), Error> {
+    let row =
+        sqlx::query("SELECT dataitem_id, owner_address FROM completed_uploads WHERE upload_id = ?")
+            .bind(upload_id)
+            .fetch_one(pool)
+            .await?;
+
+    Ok((row.get("dataitem_id"), row.get("owner_address")))
 }
