@@ -15,8 +15,8 @@ pub(crate) const UPLOADER_AR_ADDRESS: &str = "2BBwe2pSXn_Tp-q_mHry0Obp88dc7L-eDI
 pub(crate) const FREE_UPLOAD_LIMIT_BYTES: u32 = 1075200;
 pub(crate) const RECEIPT_VERSION: &str = "0.2.0";
 // ported from https://github.com/ardriveapp/turbo-upload-service/blob/main/src/constants.ts#L298
-pub(crate) const CHUNK_MIN_SIZE: u32 = 1024 * 1024 * 5; // 5MiB - AWS minimum
-pub(crate) const CHUNK_MAX_SIZE: u32 = 1024 * 1024 * 500; // 500MiB // NOTE: S3 cluster supports upto 5GiB
+pub(crate) const CHUNK_MIN_SIZE: usize = 1024 * 1024 * 5; // 5MiB - AWS minimum
+pub(crate) const CHUNK_MAX_SIZE: usize = 1024 * 1024 * 500; // 500MiB // NOTE: S3 cluster supports upto 5GiB
 pub(crate) const DEFAULT_CHUNK_SIZE: u32 = 25_000_000; // 25MB
 // a 5 years projection based on 2min blocktime,
 // counting from block #1764397

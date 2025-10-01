@@ -1,10 +1,12 @@
 use crate::{
     api::handlers::{
         handle_bundler_metrics, handle_dataitem_status, handle_health, handle_info,
-        handle_load_info, upload_tx_handler,
+        handle_load_info, upload_tx_handler
     },
     utils::{OBJECT_SIZE_LIMIT, SERVER_PORT},
 };
+use crate::db::init_db;
+use crate::api::multipart_uploads::{create_multipart_upload_handler, get_multipart_upload_handler, post_chunk_handler, finalize_multipart_upload_handler, get_multipart_upload_status_handler};
 use axum::{
     Router,
     extract::DefaultBodyLimit,
@@ -16,30 +18,44 @@ mod api;
 mod arbundles;
 mod s3;
 mod utils;
+mod db;
 
 #[tokio::main]
 async fn main() {
     // Load environment variables from a .env file if present
     dotenv().ok();
 
+    let db_pool = init_db().await.expect("Failed to initialize database");
+
     let cors = CorsLayer::new()
         .allow_origin(tower_http::cors::Any)
         .allow_methods(tower_http::cors::Any)
         .allow_headers(tower_http::cors::Any);
 
-    let router = Router::new()
-        // Turbo's uploader-api compliant
-        .route("/", get(handle_info))
-        .route("/info", get(handle_info))
-        .route("/bundler_metrics", get(handle_bundler_metrics))
-        .route("/health", get(handle_health))
-        .route("/v1/tx/{dataitem_id}/status", get(handle_dataitem_status))
-        .route("/v1/tx/{token}", post(upload_tx_handler))
-        // load network specific endpoint
-        .route("/internal", get(handle_load_info))
-        .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))
-        .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))
-        .layer(cors);
+let router = Router::new()
+    // Existing routes
+    .route("/", get(handle_info))
+    .route("/info", get(handle_info))
+    .route("/bundler_metrics", get(handle_bundler_metrics))
+    .route("/health", get(handle_health))
+    .route("/v1/tx/{dataitem_id}/status", get(handle_dataitem_status))
+    .route("/v1/tx/{token}", post(upload_tx_handler))
+    
+    // ⭐ ADD TOKEN PARAMETER TO MULTIPART ROUTES
+    .route("/v1/chunks/{token}/-1/-1", get(create_multipart_upload_handler))
+    .route("/v1/chunks/{token}/{upload_id}/-1", get(get_multipart_upload_handler))
+    .route("/v1/chunks/{token}/{upload_id}/status", get(get_multipart_upload_status_handler))
+    .route("/v1/chunks/{token}/{upload_id}/-1", post(finalize_multipart_upload_handler))
+    .route("/v1/chunks/{token}/{upload_id}/{offset}", post(post_chunk_handler))
+    .route("/v1/chunks/{token}/{upload_id}/finalize", post(finalize_multipart_upload_handler))
+    
+    
+    .route("/internal", get(handle_load_info))
+    .layer(DefaultBodyLimit::max(OBJECT_SIZE_LIMIT))
+    .layer(RequestBodyLimitLayer::new(OBJECT_SIZE_LIMIT))
+    .layer(cors)
+    .with_state(db_pool);
+
 
     // Use SERVER_PORT from env if set, otherwise default to the constant
     let port = std::env::var("SERVER_PORT").unwrap_or_else(|_| SERVER_PORT.to_string());
