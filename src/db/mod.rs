@@ -1,5 +1,4 @@
 use crate::utils::get_env_var;
-use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
 use chrono;
 use sqlx::{Row, SqlitePool};
 use anyhow::Error;
@@ -10,17 +9,6 @@ pub struct CreateUploadResponse {
     pub id: String,
     pub max: usize,
     pub min: usize,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GetUploadResponse {
-    pub id: String,
-    pub max: usize,
-    pub min: usize,
-    pub size: i64,
-    pub chunks: Vec<[i64; 2]>, // [offset, size] pairs
-    #[serde(rename = "failedReason")]
-    pub failed_reason: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
