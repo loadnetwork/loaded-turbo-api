@@ -1,6 +1,5 @@
 use crate::utils::get_env_var;
 use anyhow::Error;
-use chrono;
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
 
@@ -26,7 +25,7 @@ pub(crate) async fn init_db() -> Result<SqlitePool, Error> {
         std::fs::create_dir_all(parent)?;
     }
 
-    let pool = SqlitePool::connect(&format!("sqlite:{}", db_path)).await?;
+    let pool = SqlitePool::connect(&format!("sqlite:{db_path}")).await?;
 
     sqlx::query(
         r#"

@@ -42,7 +42,7 @@ pub async fn create_multipart_upload_handler(
     State(pool): State<SqlitePool>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let upload_id = Uuid::new_v4().to_string();
-    let upload_key = format!("multipart-{}", Uuid::new_v4().to_string());
+    let upload_key = format!("multipart-{}", Uuid::new_v4());
 
     let s3_upload_id =
         create_s3_multipart(&upload_key).await.map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -116,13 +116,12 @@ pub async fn post_chunk_handler(
         if upload.chunk_size.is_none() || content_length as i64 > upload.chunk_size.unwrap_or(0) {
             match update_chunk_size(&pool, &upload_id, content_length as i64).await {
                 Ok(_) => content_length,
-                Err(e) => {
+                Err(_e) => {
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             }
         } else {
-            let size = upload.chunk_size.unwrap() as usize;
-            size
+            upload.chunk_size.unwrap() as usize
         };
 
     // validate Turbo standards alignment
@@ -140,7 +139,7 @@ pub async fn post_chunk_handler(
             .await
             .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let _ = save_chunk(&pool, &upload_id, part_number as i64, &etag, content_length as i64)
+    save_chunk(&pool, &upload_id, part_number as i64, &etag, content_length as i64)
         .await
         .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)?;
 

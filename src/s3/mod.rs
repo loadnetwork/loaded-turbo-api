@@ -164,14 +164,14 @@ pub async fn finalize_multipart_upload(
     store_completed_upload(pool, upload_id, &dataitem_id, Some(&owner_address)).await?;
 
     // copy to final location with offchain-dataitems naming standard
-    let final_key = format!("{}/{}.ans104", s3_dir_name, dataitem_id);
+    let final_key = format!("{s3_dir_name}/{dataitem_id}.ans104");
 
     client
         .copy_object()
         .bucket(&s3_bucket_name)
-        .copy_source(format!("{}/{}", s3_bucket_name, upload.upload_key))
+        .copy_source(format!("{s3_bucket_name}/{}", upload.upload_key))
         .key(&final_key)
-        .content_type(&content_type.to_string())
+        .content_type(content_type.to_string())
         .send()
         .await?;
 
