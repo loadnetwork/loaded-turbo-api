@@ -7,7 +7,7 @@ use sha3::{Digest, Keccak256};
 use std::{env, io::Read};
 
 // constants
-pub(crate) const OBJECT_SIZE_LIMIT: usize = 1_073_741_824; // 1GB
+pub(crate) const OBJECT_SIZE_LIMIT: usize = 4 * 1_073_741_824; // 4 GB
 pub(crate) const SERVER_PORT: u32 = 3000;
 pub(crate) const DATA_CACHES: &str = "https://gateway.s3-node-1.load.network";
 pub(crate) const FAST_FINALITY_INDEXES: &str = "https://gateway.s3-node-1.load.network";

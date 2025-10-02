@@ -5,11 +5,11 @@
 </p>
 
 ## About
-A Rust-based [turbo-sdk](https://github.com/ardriveapp/turbo-sdk) compatible HTTP API endpoint. This API makes it possible to use Load S3 temporary storage layer to create & store ANS-104 DataItems offchain, temporarily -Load S3- using the Arweave's most used bundling client, `turbo-sdk`.
+A Rust-based [turbo-sdk](https://github.com/ardriveapp/turbo-sdk) compatible upload service. This API makes it possible to use Load S3 temporary storage layer to create & store ANS-104 DataItems offchain, temporarily -Load S3- using the Arweave's most used bundling client, `turbo-sdk`.
 
-> Warning: this repository is actively under development and could have breaking changes until reaching full API compatibility in v1.0.0.
+> Warning: this repository is actively under development and could have breaking changes until reaching full [turbo-upload-service](https://github.com/ardriveapp/turbo-upload-service) API (v1) compatibility in v1.0.0.
 >
-> In current release, the max object (dataitem) size limit is 1GB (1_073_741_824 bytes)
+> In current release, the max object (dataitem) size limit is 4 GB
 
 
 ## Roadmap
@@ -17,8 +17,9 @@ A Rust-based [turbo-sdk](https://github.com/ardriveapp/turbo-sdk) compatible HTT
 | Endpoint  | Status |
 | :-------------: |:-------------:|
 | `GET /` `GET /info`| ✅ |
-| `GET /bundler_metrics` | ✅ |
+| `GET /bundler_metrics` | ✅ (placeholder) |
 | `GET /health`| ✅ |
+| `GET /v1/tx/{dataitem_id}/offsets` | ✅ (placeholder)|
 | `POST /v1/tx/{token}` (<= 10MB uploads)     | ✅     |
 | `GET /v1/tx/{dataitem_id}/status` | ✅  |
 | `GET /v1/chunks/{token}/-1/-1`      | ✅     |
@@ -26,6 +27,8 @@ A Rust-based [turbo-sdk](https://github.com/ardriveapp/turbo-sdk) compatible HTT
 | `GET /v1/chunks/{token}/{upload_id}/status`      | ✅    |
 | `POST /v1/chunks/{token}/{upload_id}/{offset}`      | ✅    |
 | `POST /v1/chunks/{token}/{upload_id}/finalize` | ✅ |
+| `GET /account/balance/:id`| not supported, [deprecated](https://github.com/ardriveapp/turbo-upload-service/blob/main/src/router.ts#L48) in turbo-upload-service|
+| `GET /price/:token/:byteCount?`| not supported, deprecated in turbo-upload-service|
 
 ## Endpoints:
 
