@@ -47,6 +47,10 @@ pub async fn handle_health() -> &'static str {
     "OK"
 }
 
+pub async fn handle_tx_offsets(Path(_id): Path<String>) -> &'static str {
+    "Method not supported: Load Bundler does not bundle dataitems, dataitems get bundled by the Arweave permanent bundling service (e.g. Turbo)"
+}
+
 pub async fn handle_dataitem_status(
     Path(dataitem_id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {

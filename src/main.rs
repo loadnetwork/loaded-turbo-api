@@ -2,7 +2,7 @@ use crate::{
     api::{
         handlers::{
             handle_bundler_metrics, handle_dataitem_status, handle_health, handle_info,
-            handle_load_info, upload_tx_handler,
+            handle_load_info, handle_tx_offsets, upload_tx_handler,
         },
         multipart_uploads::{
             create_multipart_upload_handler, finalize_multipart_upload_handler,
@@ -45,6 +45,7 @@ async fn main() {
         .route("/health", get(handle_health))
         .route("/v1/tx/{dataitem_id}/status", get(handle_dataitem_status))
         .route("/v1/tx/{token}", post(upload_tx_handler))
+        .route("/v1/tx/{dataitem_id}/offsets", get(handle_tx_offsets))
         // multipart upload
         .route("/v1/chunks/{token}/-1/-1", get(create_multipart_upload_handler))
         .route("/v1/chunks/{token}/{upload_id}/-1", get(get_multipart_upload_handler))
