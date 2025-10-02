@@ -123,7 +123,7 @@ import fs from 'fs';
   // Create large file to force multipart upload (>10MB)
   const largeTestData = 'A'.repeat(15 * 1024 * 1024); // 15MB
   fs.writeFileSync('large-test-file.txt', largeTestData);
-  console.log('📄 Created 15MB test file');
+  console.log('Created 15MB test file');
 
   // Generate test wallet
   const arweave = new Arweave({});
