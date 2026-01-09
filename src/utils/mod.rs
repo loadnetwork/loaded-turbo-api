@@ -1,6 +1,9 @@
 use anyhow::Error;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use bundles_rs::{ans104::data_item::DataItem, crypto::signer::SignatureType};
+use bundles_rs::{
+    ans104::{data_item::DataItem, tags::decode_tags},
+    crypto::signer::SignatureType,
+};
 use byteorder::{LittleEndian, ReadBytesExt};
 use dotenvy::dotenv;
 use sha3::{Digest, Keccak256};
@@ -48,6 +51,10 @@ pub(crate) fn extract_owner_address(dataitem: &DataItem) -> String {
     }
 }
 
+pub(crate) fn extract_target(dataitem: &DataItem) -> Option<String> {
+    dataitem.target.map(|target| URL_SAFE_NO_PAD.encode(target))
+}
+
 fn ethereum_address_from_pubkey(pubkey: &[u8]) -> String {
     if pubkey.len() == 65 && pubkey[0] == 0x04 {
         let hash = Keccak256::digest(&pubkey[1..]);
@@ -93,14 +100,16 @@ pub(crate) fn reconstruct_dataitem_data(data: Vec<u8>) -> Result<(DataItem, Stri
     };
 
     // parse tags
+    let tags_count = cursor.read_u64::<LittleEndian>()? as usize;
     let tags_bytes_len = cursor.read_u64::<LittleEndian>()? as usize;
 
     let mut tags_bytes = vec![0u8; tags_bytes_len];
     cursor.read_exact(&mut tags_bytes)?;
 
-    // decode tags from Avro format
-    // let tags = bundles_rs::ans104::tags::decode_tags(&tags_bytes)?;
-    let tags = vec![];
+    let tags = decode_tags(&tags_bytes)?;
+    if tags.len() != tags_count {
+        return Err(anyhow::anyhow!("tag count mismatch"));
+    }
 
     // parse actual dataitem's data (remaining bytes)
     let mut data_bytes = Vec::new();

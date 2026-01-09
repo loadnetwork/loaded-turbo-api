@@ -18,15 +18,19 @@ use axum::{
     routing::{get, post},
 };
 use dotenvy::dotenv;
+use rustls::crypto::ring::default_provider;
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer};
 mod api;
 mod arbundles;
 mod db;
+mod indexing;
 mod s3;
 mod utils;
 
 #[tokio::main]
 async fn main() {
+    let _ = default_provider().install_default();
+
     // Load environment variables from a .env file if present
     dotenv().ok();
 

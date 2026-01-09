@@ -1,6 +1,7 @@
 use crate::{
     db::{get_upload, store_completed_upload},
-    utils::{extract_owner_address, get_env_var, reconstruct_dataitem_data},
+    indexing::index_dataitem,
+    utils::{extract_owner_address, extract_target, get_env_var, reconstruct_dataitem_data},
 };
 
 use anyhow::Error;
@@ -38,6 +39,11 @@ pub(crate) async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error
     let dataitem = reconstruct_dataitem_data(data.clone())?;
 
     let dataitem_id = dataitem.0.arweave_id();
+    let tags_for_index: Vec<(String, String)> =
+        dataitem.0.tags.iter().map(|tag| (tag.name.clone(), tag.value.clone())).collect();
+    let dataitem_size = data.len();
+    let owner = extract_owner_address(&dataitem.0);
+    let target = extract_target(&dataitem.0);
     let key_dataitem: String = format!("{s3_dir_name}/{dataitem_id}.ans104");
 
     // store it as ans-104 serialized dataitem
@@ -49,6 +55,16 @@ pub(crate) async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error
         .content_type(dataitem.1.to_string())
         .send()
         .await?;
+
+    index_dataitem(
+        &dataitem_id,
+        &dataitem.1,
+        &tags_for_index,
+        dataitem_size,
+        Some(owner),
+        target,
+    )
+    .await?;
 
     Ok(dataitem_id)
 }
@@ -159,6 +175,10 @@ pub async fn finalize_multipart_upload(
     let dataitem_id = dataitem.arweave_id();
 
     let owner_address = extract_owner_address(&dataitem);
+    let target = extract_target(&dataitem);
+    let tags_for_index: Vec<(String, String)> =
+        dataitem.tags.iter().map(|tag| (tag.name.clone(), tag.value.clone())).collect();
+    let dataitem_size = body.len();
 
     // store completed upload info before cleanup
     store_completed_upload(pool, upload_id, &dataitem_id, Some(&owner_address)).await?;
@@ -174,6 +194,16 @@ pub async fn finalize_multipart_upload(
         .content_type(content_type.to_string())
         .send()
         .await?;
+
+    index_dataitem(
+        &dataitem_id,
+        &content_type,
+        &tags_for_index,
+        dataitem_size,
+        Some(owner_address),
+        target,
+    )
+    .await?;
 
     // delete temporary multipart object
     client.delete_object().bucket(&s3_bucket_name).key(&upload.upload_key).send().await?;

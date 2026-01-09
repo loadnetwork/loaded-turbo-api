@@ -44,13 +44,19 @@ pub async fn create_multipart_upload_handler(
     let upload_id = Uuid::new_v4().to_string();
     let upload_key = format!("multipart-{}", Uuid::new_v4());
 
-    let s3_upload_id =
-        create_s3_multipart(&upload_key).await.map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let s3_upload_id = match create_s3_multipart(&upload_key).await {
+        Ok(id) => id,
+        Err(e) => {
+            println!("create_multipart_upload: s3 create failed upload_id={upload_id} error={e:?}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
     // store in db
-    let _ = create_upload_record(&pool, &upload_id, &upload_key, &s3_upload_id)
-        .await
-        .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR);
+    if let Err(e) = create_upload_record(&pool, &upload_id, &upload_key, &s3_upload_id).await {
+        println!("create_multipart_upload: db insert failed upload_id={upload_id} error={e:?}");
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
 
     // return the format Turbo-sdk expects to progress to upload phase
     let response = serde_json::json!({
@@ -68,10 +74,21 @@ pub async fn get_multipart_upload_handler(
     Path((_token, upload_id)): Path<(String, String)>,
     State(pool): State<SqlitePool>,
 ) -> Result<Json<GetUploadResponse>, StatusCode> {
-    let upload = get_upload(&pool, &upload_id).await.map_err(|_| StatusCode::NOT_FOUND)?;
+    let upload = match get_upload(&pool, &upload_id).await {
+        Ok(upload) => upload,
+        Err(e) => {
+            println!("get_multipart_upload: not found upload_id={upload_id} error={e:?}");
+            return Err(StatusCode::NOT_FOUND);
+        }
+    };
 
-    let chunks =
-        get_chunks(&pool, &upload_id).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let chunks = match get_chunks(&pool, &upload_id).await {
+        Ok(chunks) => chunks,
+        Err(e) => {
+            println!("get_multipart_upload: chunks failed upload_id={upload_id} error={e:?}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
     let chunk_size = upload.chunk_size.unwrap_or(DEFAULT_CHUNK_SIZE);
 
@@ -104,11 +121,21 @@ pub async fn post_chunk_handler(
         .get("content-length")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<usize>().ok())
-        .ok_or(StatusCode::BAD_REQUEST)?;
+        .ok_or_else(|| {
+            println!("post_chunk: missing content-length upload_id={upload_id} offset={chunk_offset}");
+            StatusCode::BAD_REQUEST
+        })?;
 
-    let upload = get_upload(&pool, &upload_id).await.map_err(|_e| StatusCode::NOT_FOUND)?;
+    let upload = match get_upload(&pool, &upload_id).await {
+        Ok(upload) => upload,
+        Err(e) => {
+            println!("post_chunk: upload not found upload_id={upload_id} error={e:?}");
+            return Err(StatusCode::NOT_FOUND);
+        }
+    };
 
     if upload.failed_reason.is_some() {
+        println!("post_chunk: upload failed upload_id={upload_id}");
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -117,6 +144,9 @@ pub async fn post_chunk_handler(
             match update_chunk_size(&pool, &upload_id, content_length as i64).await {
                 Ok(_) => content_length,
                 Err(_e) => {
+                    println!(
+                        "post_chunk: update chunk size failed upload_id={upload_id} size={content_length}"
+                    );
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             }
@@ -126,22 +156,39 @@ pub async fn post_chunk_handler(
 
     // validate Turbo standards alignment
     if chunk_offset % chunk_size != 0 {
+        println!(
+            "post_chunk: misaligned offset upload_id={upload_id} offset={chunk_offset} size={chunk_size}"
+        );
         return Err(StatusCode::BAD_REQUEST);
     }
 
     let part_number = (chunk_offset / chunk_size) + 1;
     if part_number > 10_000 {
+        println!("post_chunk: part number too large upload_id={upload_id} part={part_number}");
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let etag =
-        upload_part_s3(&upload.upload_key, &upload.s3_upload_id, part_number as i32, body.to_vec())
-            .await
-            .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let etag = match upload_part_s3(
+        &upload.upload_key,
+        &upload.s3_upload_id,
+        part_number as i32,
+        body.to_vec(),
+    )
+    .await
+    {
+        Ok(etag) => etag,
+        Err(e) => {
+            println!("post_chunk: s3 upload failed upload_id={upload_id} part={part_number} error={e:?}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
-    save_chunk(&pool, &upload_id, part_number as i64, &etag, content_length as i64)
+    if let Err(e) = save_chunk(&pool, &upload_id, part_number as i64, &etag, content_length as i64)
         .await
-        .map_err(|_e| StatusCode::INTERNAL_SERVER_ERROR)?;
+    {
+        println!("post_chunk: save failed upload_id={upload_id} part={part_number} error={e:?}");
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
 
     Ok(StatusCode::OK)
 }
@@ -165,7 +212,10 @@ pub async fn finalize_multipart_upload_handler(
 
             Ok(Json(serde_json::to_value(unsigned_receipt).unwrap_or_default()))
         }
-        Err(_e) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => {
+            println!("finalize_multipart_upload: failed upload_id={upload_id} error={e:?}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
 
@@ -203,7 +253,10 @@ pub async fn get_multipart_upload_status_handler(
                     };
                     Ok(Json(serde_json::to_value(res).unwrap_or_default()))
                 }
-                Err(_) => Err(StatusCode::NOT_FOUND),
+                Err(e) => {
+                    println!("get_multipart_upload_status: not found upload_id={upload_id} error={e:?}");
+                    Err(StatusCode::NOT_FOUND)
+                }
             }
         }
     }

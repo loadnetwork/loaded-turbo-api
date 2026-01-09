@@ -76,6 +76,7 @@ pub async fn upload_tx_handler(
 ) -> Result<Json<SignedReceipt>, StatusCode> {
     if let Some(content_type) = headers.get("content-type") {
         if content_type != "application/octet-stream" {
+            println!("upload_tx_handler: invalid content-type {:?}", content_type);
             return Err(StatusCode::BAD_REQUEST);
         }
     }
@@ -84,12 +85,18 @@ pub async fn upload_tx_handler(
 
     let (dataitem, _content_type) = match reconstruct_dataitem_data(data.clone()) {
         Ok(result) => result,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
+        Err(e) => {
+            println!("upload_tx_handler: reconstruct failed error={e:?}");
+            return Err(StatusCode::BAD_REQUEST);
+        }
     };
 
     let transaction_id = match store_signed_dataitem(data).await {
         Ok(id) => id,
-        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => {
+            println!("upload_tx_handler: store failed error={e:?}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
     };
 
     let owner = extract_owner_address(&dataitem);
