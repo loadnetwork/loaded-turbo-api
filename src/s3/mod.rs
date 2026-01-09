@@ -56,15 +56,8 @@ pub(crate) async fn store_signed_dataitem(data: Vec<u8>) -> Result<String, Error
         .send()
         .await?;
 
-    index_dataitem(
-        &dataitem_id,
-        &dataitem.1,
-        &tags_for_index,
-        dataitem_size,
-        Some(owner),
-        target,
-    )
-    .await?;
+    index_dataitem(&dataitem_id, &dataitem.1, &tags_for_index, dataitem_size, Some(owner), target)
+        .await?;
 
     Ok(dataitem_id)
 }

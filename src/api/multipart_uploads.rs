@@ -122,7 +122,9 @@ pub async fn post_chunk_handler(
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<usize>().ok())
         .ok_or_else(|| {
-            println!("post_chunk: missing content-length upload_id={upload_id} offset={chunk_offset}");
+            println!(
+                "post_chunk: missing content-length upload_id={upload_id} offset={chunk_offset}"
+            );
             StatusCode::BAD_REQUEST
         })?;
 
@@ -139,20 +141,21 @@ pub async fn post_chunk_handler(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let chunk_size =
-        if upload.chunk_size.is_none() || content_length as i64 > upload.chunk_size.unwrap_or(0) {
-            match update_chunk_size(&pool, &upload_id, content_length as i64).await {
-                Ok(_) => content_length,
-                Err(_e) => {
-                    println!(
-                        "post_chunk: update chunk size failed upload_id={upload_id} size={content_length}"
-                    );
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
+    let chunk_size = if upload.chunk_size.is_none()
+        || content_length as i64 > upload.chunk_size.unwrap_or(0)
+    {
+        match update_chunk_size(&pool, &upload_id, content_length as i64).await {
+            Ok(_) => content_length,
+            Err(_e) => {
+                println!(
+                    "post_chunk: update chunk size failed upload_id={upload_id} size={content_length}"
+                );
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
-        } else {
-            upload.chunk_size.unwrap() as usize
-        };
+        }
+    } else {
+        upload.chunk_size.unwrap() as usize
+    };
 
     // validate Turbo standards alignment
     if chunk_offset % chunk_size != 0 {
@@ -178,13 +181,15 @@ pub async fn post_chunk_handler(
     {
         Ok(etag) => etag,
         Err(e) => {
-            println!("post_chunk: s3 upload failed upload_id={upload_id} part={part_number} error={e:?}");
+            println!(
+                "post_chunk: s3 upload failed upload_id={upload_id} part={part_number} error={e:?}"
+            );
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
 
-    if let Err(e) = save_chunk(&pool, &upload_id, part_number as i64, &etag, content_length as i64)
-        .await
+    if let Err(e) =
+        save_chunk(&pool, &upload_id, part_number as i64, &etag, content_length as i64).await
     {
         println!("post_chunk: save failed upload_id={upload_id} part={part_number} error={e:?}");
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
@@ -254,7 +259,9 @@ pub async fn get_multipart_upload_status_handler(
                     Ok(Json(serde_json::to_value(res).unwrap_or_default()))
                 }
                 Err(e) => {
-                    println!("get_multipart_upload_status: not found upload_id={upload_id} error={e:?}");
+                    println!(
+                        "get_multipart_upload_status: not found upload_id={upload_id} error={e:?}"
+                    );
                     Err(StatusCode::NOT_FOUND)
                 }
             }
